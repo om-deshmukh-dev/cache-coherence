@@ -24,6 +24,7 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   cache->n_offset_bit = 1;
   cache->n_index_bit = 1;
   cache->n_tag_bit = 1;
+  int hellothere = 0;
 
   // Create the cache lines and the array of LRU bits
   // 
