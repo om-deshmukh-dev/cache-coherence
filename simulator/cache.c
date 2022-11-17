@@ -17,7 +17,7 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   // Implementation details
   // Calculate cache parameters Calculate parameters
   // 
-  int num = 0;
+
   int sum = 0;
   cache->n_cache_line = 1;
   cache->n_set = 1;
