@@ -18,29 +18,31 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   // Calculate cache parameters Calculate parameters
   // 
 
-  int sum = 0;
-  cache->n_cache_line = 1;
-  cache->n_set = 1;
-  cache->n_offset_bit = 1;
-  cache->n_index_bit = 1;
-  cache->n_tag_bit = 1;
-  int hellothere = 0;
+  cache->n_cache_line = capacity / block_size;
+  cache->n_set = capacity / (block_size * assoc);
+  cache->n_offset_bit = log2(block_size);
+  cache->n_index_bit = log2(cache->n_set);
+  cache->n_tag_bit = 32 - (cache->n_index_bit + cache->n_offset_bit); 
 
   // Create the cache lines and the array of LRU bits
   // 
   // 
   // Implementation details
-  int nigel = 1;
 
-  cache->lines = NULL;
-  cache->lru_way = NULL;
+  cache->lines = malloc(cache->n_cache_line * sizeof(cache_line_t*));
+  for (int i = 0; i < cache->n_cache_line; i++) {
+    cache->lines[i] = malloc(assoc * sizeof(cache_line_t));
+  }
+  cache->lru_way = malloc(cache->n_cache_line * sizeof(int));
 
   // Initialize cache tags to 0, dirty bits to false,
   // state to INVALID, and LRU bits to 0
   // Implementation details
-  for (int i = 0; i < 1; i++) {
-    for (int j = 0; j < 1; j++) {
-      // body goes here
+  for (int i = 0; i < cache->n_cache_line; i++) {
+    for (int j = 0; j < cache->assoc; j++) {
+      cache->lines[i][j].tag = 0;
+      cache->lines[i][j].dirty_f = false;
+      cache->lines[i][j].state = INVALID;
     }
   }
 
