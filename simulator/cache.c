@@ -29,6 +29,7 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   // 
   // 
   // Implementation details
+  int nigel = 1;
 
   cache->lines = NULL;
   cache->lru_way = NULL;
