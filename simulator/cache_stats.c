@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 
 #include "cache_stats.h"
 
@@ -62,10 +63,9 @@ void calculate_stat_rates(cache_stats_t *stats, int block_size) {
   // Implementation details
   // 
   // calculate wb and wt data
-  stats->B_bus_to_cache = 0;
-  stats->B_cache_to_bus_wb = 0;
-  stats->B_cache_to_bus_wt = 0;
-  stats->B_total_traffic_wb = 0;
-  stats->B_total_traffic_wt = 0;
-
+  stats->B_bus_to_cache = round((stats->n_hits / stats->hit_rate - stats->n_hits) * block_size);
+  stats->B_cache_to_bus_wb = stats->n_writebacks * block_size;
+  stats->B_cache_to_bus_wt = 0; //no change
+  stats->B_total_traffic_wb = stats->B_bus_to_cache + stats->B_cache_to_bus_wb;
+  stats->B_total_traffic_wt = 0; //no change
 }

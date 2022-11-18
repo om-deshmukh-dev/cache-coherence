@@ -98,9 +98,11 @@ unsigned long get_cache_block_addr(cache_t *cache, unsigned long addr) {
  * Use the "get" helper functions above. They make your life easier.
  */
 bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
+  //log_set(get_cache_index(cache, addr));
   unsigned long index = get_cache_index(cache, addr);
   cache_line_t* blockPtr = cache->lines[index];
   unsigned long tag = get_cache_tag(cache, addr);
+  /*
   if(cache->assoc == 1){
     if (blockPtr->tag != tag || blockPtr->state == INVALID) {
       blockPtr->tag = tag;
@@ -111,8 +113,12 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
     update_stats(cache->stats, true, false, false, action);
     return true;  // cache hit should return true
   }
+  */
   for (int i = 0; i < cache->assoc; i++){
     if (blockPtr[i].tag == tag && blockPtr->state == VALID){
+      //log_way(cache->lru_way[index]);
+      if (action == STORE)
+        blockPtr[i].dirty_f = true;
       if (cache->lru_way[index] == i){
         int lruIndex = i + 1;
         if (lruIndex >= cache->assoc)
@@ -124,14 +130,25 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
     }
   }
   cache_line_t* evicted = &blockPtr[cache->lru_way[index]];
+  if (action == LOAD && evicted->dirty_f == true) {
+    evicted->dirty_f = false;
+    update_stats(cache->stats, false, true, false, action);
+  }
+  else if (action == STORE){
+    if(evicted->dirty_f == true)
+      update_stats(cache->stats, false, true, false, action);
+    else
+      update_stats(cache->stats, false, false, false, action);
+    evicted->dirty_f = true;
+  }
+  else
+    update_stats(cache->stats, false, false, false, action);
   evicted->tag = tag;
   evicted->state = VALID;
-  if (cache->lru_way[index] + 1 >= cache->assoc)
+  if (cache->lru_way[index] + 1 >= cache->assoc) //write lru wraparound helper function?   send cache and index as parameters, function sets array w/ new lru way, no return
     cache->lru_way[index] = 0;
   else
     cache->lru_way[index] += 1;
-//update lru_way for cache misses  DONE
-//write lru wraparound helper function?   send cache and index as parameters, function sets array w/ new lru way, no return
-  update_stats(cache->stats, false, false, false, action);
+  //log_way(cache->lru_way[index]);
   return false;
 }
