@@ -48,7 +48,7 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   for(int i = 0; i < cache->n_set; i++){
     cache->lru_way[i] = 0;
   }
-
+  
   cache->protocol = protocol;
   cache->lru_on_invalidate_f = lru_on_invalidate_f;
   
@@ -98,35 +98,16 @@ unsigned long get_cache_block_addr(cache_t *cache, unsigned long addr) {
  * Use the "get" helper functions above. They make your life easier.
  */
 bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
-  unsigned long index = get_cache_index(cache, addr);
-  cache_line_t* blockPtr = cache->lines[index];
-  unsigned long tag = get_cache_tag(cache, addr);
   if(cache->assoc == 1){
+    cache_line_t* blockPtr = cache->lines[get_cache_index(cache, addr)];
+    unsigned long tag = get_cache_tag(cache, addr);
     if (blockPtr->tag != tag || blockPtr->state == INVALID) {
       blockPtr->tag = tag;
       blockPtr->state = VALID;
       update_stats(cache->stats, false, false, false, action);
       return false;
     }
-    update_stats(cache->stats, true, false, false, action);
-    return true;  // cache hit should return true
+  update_stats(cache->stats, true, false, false, action);
   }
-  for (int i = 0; i < cache->assoc; i++){
-    if (blockPtr[i].tag == tag && blockPtr->state == VALID){
-      if (cache->lru_way[index] == i){
-        int lruIndex = i + 1;
-        if (lruIndex >= cache->assoc)
-          lruIndex = 0;
-        cache->lru_way[index] = lruIndex;
-      }
-      update_stats(cache->stats, true, false, false, action);
-      return true;
-    }
-  }
-  cache_line_t* evicted = &blockPtr[cache->lru_way[index]];
-  evicted->tag = tag;
-  evicted->state = VALID;
-//update lru_way for cache misses
-//write lru wraparound helper function?
-  return false;
+  return true;  // cache hit should return true
 }
