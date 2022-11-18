@@ -29,23 +29,26 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   // 
   // Implementation details
 
-  cache->lines = malloc(cache->n_cache_line * sizeof(cache_line_t*));
-  for (int i = 0; i < cache->n_cache_line; i++) {
+  cache->lines = malloc(cache->n_set * sizeof(cache_line_t*));
+  for (int i = 0; i < cache->n_set; i++) {
     cache->lines[i] = malloc(assoc * sizeof(cache_line_t));
   }
-  cache->lru_way = malloc(cache->n_cache_line * sizeof(int));
+  cache->lru_way = malloc(cache->n_set * sizeof(int));
 
   // Initialize cache tags to 0, dirty bits to false,
   // state to INVALID, and LRU bits to 0
   // Implementation details
-  for (int i = 0; i < cache->n_cache_line; i++) {
+  for (int i = 0; i < cache->n_set; i++) {
     for (int j = 0; j < cache->assoc; j++) {
       cache->lines[i][j].tag = 0;
       cache->lines[i][j].dirty_f = false;
       cache->lines[i][j].state = INVALID;
     }
   }
-
+  for(int i = 0; i < cache->n_set; i++){
+    cache->lru_way[i] = 0;
+  }
+  
   cache->protocol = protocol;
   cache->lru_on_invalidate_f = lru_on_invalidate_f;
   
@@ -59,8 +62,7 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
  * in decimal -- get_cache_tag(3921) returns 15 
  */
 unsigned long get_cache_tag(cache_t *cache, unsigned long addr) {
-  // Implementation details
-  return 0;
+  return addr >> (32 - cache->n_tag_bit);
 }
 
 /* Given a configured cache, returns the index portion of the given address.
@@ -70,8 +72,9 @@ unsigned long get_cache_tag(cache_t *cache, unsigned long addr) {
  * in decimal -- get_cache_index(3921) returns 5
  */
 unsigned long get_cache_index(cache_t *cache, unsigned long addr) {
-  // Implementation details
-  return 0;
+  unsigned long index = addr << (cache->n_tag_bit + 32);
+  index = index >> (cache->n_tag_bit + cache->n_offset_bit + 32);
+  return index;
 }
 
 /* Given a configured cache, returns the given address with the offset bits zeroed out.
@@ -81,8 +84,8 @@ unsigned long get_cache_index(cache_t *cache, unsigned long addr) {
  * in decimal -- get_cache_block_addr(3921) returns 3920
  */
 unsigned long get_cache_block_addr(cache_t *cache, unsigned long addr) {
-  // Implementation details
-  return 0;
+  addr = addr >> cache->n_offset_bit;
+  return addr << cache->n_offset_bit;
 }
 
 
@@ -95,8 +98,16 @@ unsigned long get_cache_block_addr(cache_t *cache, unsigned long addr) {
  * Use the "get" helper functions above. They make your life easier.
  */
 bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
-  // Implementation details
-
-
+  if(cache->assoc == 1){
+    cache_line_t* blockPtr = cache->lines[get_cache_index(cache, addr)];
+    unsigned long tag = get_cache_tag(cache, addr);
+    if (blockPtr->tag != tag || blockPtr->state == INVALID) {
+      blockPtr->tag = tag;
+      blockPtr->state = VALID;
+      update_stats(cache->stats, false, false, false, action);
+      return false;
+    }
+  update_stats(cache->stats, true, false, false, action);
+  }
   return true;  // cache hit should return true
 }
