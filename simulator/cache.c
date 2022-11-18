@@ -126,7 +126,12 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
   cache_line_t* evicted = &blockPtr[cache->lru_way[index]];
   evicted->tag = tag;
   evicted->state = VALID;
-//update lru_way for cache misses
-//write lru wraparound helper function?
+  if (cache->lru_way[index] + 1 >= cache->assoc)
+    cache->lru_way[index] = 0;
+  else
+    cache->lru_way[index] += 1;
+//update lru_way for cache misses  DONE
+//write lru wraparound helper function?   send cache and index as parameters, function sets array w/ new lru way, no return
+  update_stats(cache->stats, false, false, false, action);
   return false;
 }
