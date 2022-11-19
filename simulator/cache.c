@@ -102,21 +102,13 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
   unsigned long index = get_cache_index(cache, addr);
   cache_line_t* blockPtr = cache->lines[index];
   unsigned long tag = get_cache_tag(cache, addr);
-  /*
-  if(cache->assoc == 1){
-    if (blockPtr->tag != tag || blockPtr->state == INVALID) {
-      blockPtr->tag = tag;
-      blockPtr->state = VALID;
-      update_stats(cache->stats, false, false, false, action);
-      return false;
-    }
-    update_stats(cache->stats, true, false, false, action);
-    return true;  // cache hit should return true
-  }
-  */
   for (int i = 0; i < cache->assoc; i++){
     if (blockPtr[i].tag == tag && blockPtr->state == VALID){
       //log_way(cache->lru_way[index]);
+      if (action == LD_MISS || action == ST_MISS){
+        update_stats(cache->stats, true, false, false, action);
+        return true;
+      }
       if (action == STORE)
         blockPtr[i].dirty_f = true;
       if (cache->lru_way[index] == i){
@@ -143,6 +135,8 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
   }
   else
     update_stats(cache->stats, false, false, false, action);
+    if (action == LD_MISS || action == ST_MISS)
+      return false;
   evicted->tag = tag;
   evicted->state = VALID;
   if (cache->lru_way[index] + 1 >= cache->assoc) //write lru wraparound helper function?   send cache and index as parameters, function sets array w/ new lru way, no return
