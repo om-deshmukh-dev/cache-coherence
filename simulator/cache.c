@@ -283,7 +283,9 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
 bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
   if (cache->protocol == MSI)  //if cache implements MSI protocol, use access_msi_cache functon
     return access_msi_cache(cache, addr, action);
-  unsigned long index = get_cache_index(cache, addr);
+  unsigned long index = 0;
+  if (cache->n_index_bit != 0)
+    index = get_cache_index(cache, addr);
   log_set(index);
   cache_line_t* blockPtr = cache->lines[index];
   unsigned long tag = get_cache_tag(cache, addr);
