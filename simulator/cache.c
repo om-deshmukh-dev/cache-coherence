@@ -101,7 +101,9 @@ void change_lru(cache_t *cache, unsigned long index, int way){
 }
 
 bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
-  unsigned long index = get_cache_index(cache, addr);
+  unsigned long index = 0;
+  if (cache->n_index_bit != 0)
+    index = get_cache_index(cache, addr);
   unsigned long tag = get_cache_tag(cache, addr);
   log_set(index);
   cache_line_t* blockPtr = cache->lines[index]; //blockPtr points to the array of $ lines at index (the ways of the set)
