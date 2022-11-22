@@ -31,8 +31,8 @@ def run_exp(logfile, core, cap, bsize, assoc):
     trace = 'trace.%dt.long.txt' % core
     cmd="./p5 -t %s -p %s -n %d -cache %d %d %d >> %s" % (
             trace, protocol, core, cap, bsize, assoc, logfile)
-    print(cmd)
     os.system(cmd)
+    print(cmd)
 
 def graph():
     timestr = time.strftime("%m.%d-%H_%M_%S")

@@ -124,7 +124,7 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
   */
 
   for(int way = 0; way < cache->assoc; way++){   //check if addr is a hit
-    if(blockPtr[way].tag == tag){
+    if(blockPtr[way].tag == tag && blockPtr->state != INVALID){
       blockPtr = &blockPtr[way];   //blockPtr now points to the block that was a hit
       log_way(way);
       if (blockPtr->state == INVALID){
