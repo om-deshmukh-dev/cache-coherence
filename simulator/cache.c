@@ -107,7 +107,6 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
   unsigned long tag = get_cache_tag(cache, addr);
   log_set(index);
   cache_line_t* blockPtr = cache->lines[index]; //blockPtr points to the array of $ lines at index (the ways of the set)
-  
   //check if addr is hit
   /*
   bool hit = false;
@@ -117,16 +116,12 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
       hit = true;
       break;
   }
-  enum state_t newState = blockPtr->state;
-  bool newDirty = blockPtr->dirty_f;
-  bool writeback = false;
-  bool upgradeMiss = false;
   */
-
   for(int way = 0; way < cache->assoc; way++){   //check if addr is a hit
     if(blockPtr[way].tag == tag && blockPtr->state != INVALID){
       blockPtr = &blockPtr[way];   //blockPtr now points to the block that was a hit
       log_way(way);
+      /*
       if (blockPtr->state == INVALID){
         if (action == LOAD)
           blockPtr->state = SHARED;
@@ -134,7 +129,8 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
           blockPtr->state = MODIFIED;
         update_stats(cache->stats, true, false, false, action);
       }
-      else if (blockPtr->state == SHARED){
+      */
+      if (blockPtr->state == SHARED){
         if (action == ST_MISS)
           blockPtr->state = INVALID;
         else if (action == STORE)
@@ -158,13 +154,14 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
       return true;
     }
   }
-  
   //if addr didn't hit
   log_way(cache->lru_way[index]);
+  /*
   if (action == LD_MISS || action == ST_MISS){
     update_stats(cache->stats, false, false, false, action);
     return false;
   }
+  */
   blockPtr = &blockPtr[cache->lru_way[index]]; //blockPtr now points to block about to get evicted
   update_stats(cache->stats, false, blockPtr->dirty_f, false, action);  //dirty bit matches writeback bool
   blockPtr->state = (action == LOAD) ? SHARED : MODIFIED;
