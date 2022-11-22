@@ -1,0 +1,88 @@
+P5 Printout for CS 3410
+----------------------------------
+Trace  		trace.4t.long.txt
+Instruction Limit 	none
+ *** Cache Configuration *** 
+capacity   		65536 B
+block_size 		   32 B
+associativity 		4-way
+n_set 			512
+n_cache_line 	2048
+tag: 18, index: 9, offset: 5
+Coherence Protocol: 	msi
+lru_on_invalidate_f: 	false
+Processing trace...
+4 2
+Processed 999998 lines.
+    *** Results for Core 0 ***
+0.n_cpu_accesses 	250001
+0.n_loads 		192500
+0.n_stores 		57501
+0.n_hits 		221677
+0.n_misses 		28324
+0.hit_rate 		88.67
+0.miss_rate 		11.33
+0.n_upgrade_miss 	2886
+0.n_bus_snoops 	93707
+0.n_snoop_hits 	14106
+0.n_writebacks 	19145
+Memory Traffic:
+0.B_written_bus_to_cache 	814016
+0.B_written_cache_to_bus_wb 	612640
+0.B_written_cache_to_bus_wt 	0
+0.B_total_traffic_wb 	1426656
+0.B_total_traffic_wt 	0
+    *** Results for Core 1 ***
+1.n_cpu_accesses 	249999
+1.n_loads 		166714
+1.n_stores 		83285
+1.n_hits 		213505
+1.n_misses 		36494
+1.hit_rate 		85.40
+1.miss_rate 		14.60
+1.n_upgrade_miss 	4586
+1.n_bus_snoops 	85537
+1.n_snoop_hits 	12926
+1.n_writebacks 	24234
+Memory Traffic:
+1.B_written_bus_to_cache 	1021056
+1.B_written_cache_to_bus_wb 	775488
+1.B_written_cache_to_bus_wt 	0
+1.B_total_traffic_wb 	1796544
+1.B_total_traffic_wt 	0
+    *** Results for Core 2 ***
+2.n_cpu_accesses 	249999
+2.n_loads 		190395
+2.n_stores 		59604
+2.n_hits 		215844
+2.n_misses 		34155
+2.hit_rate 		86.34
+2.miss_rate 		13.66
+2.n_upgrade_miss 	2378
+2.n_bus_snoops 	87876
+2.n_snoop_hits 	14595
+2.n_writebacks 	21775
+Memory Traffic:
+2.B_written_bus_to_cache 	1016864
+2.B_written_cache_to_bus_wb 	696800
+2.B_written_cache_to_bus_wt 	0
+2.B_total_traffic_wb 	1713664
+2.B_total_traffic_wt 	0
+    *** Results for Core 3 ***
+3.n_cpu_accesses 	249999
+3.n_loads 		192244
+3.n_stores 		57755
+3.n_hits 		226941
+3.n_misses 		23058
+3.hit_rate 		90.78
+3.miss_rate 		9.22
+3.n_upgrade_miss 	2563
+3.n_bus_snoops 	98973
+3.n_snoop_hits 	14763
+3.n_writebacks 	18064
+Memory Traffic:
+3.B_written_bus_to_cache 	655840
+3.B_written_cache_to_bus_wb 	578048
+3.B_written_cache_to_bus_wt 	0
+3.B_total_traffic_wb 	1233888
+3.B_total_traffic_wt 	0

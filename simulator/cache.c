@@ -117,9 +117,14 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
       break;
   }
   */
+ int way_hitInvalid = 0;
   for(int way = 0; way < cache->assoc; way++){   //check if addr is a hit
-    if(blockPtr[way].tag == tag && blockPtr->state != INVALID){
+    if(blockPtr[way].tag == tag /*&& blockPtr[way].state != INVALID*/){
       blockPtr = &blockPtr[way];   //blockPtr now points to the block that was a hit
+      if(blockPtr->state == INVALID){
+        way_hitInvalid = way;
+        break;
+      }
       log_way(way);
       /*
       if (blockPtr->state == INVALID){
@@ -138,6 +143,7 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
         }
         else if (action == STORE) {
           blockPtr->state = MODIFIED;
+          blockPtr->dirty_f = true;
           update_stats(cache->stats, false, false, true, action);
           change_lru(cache, index, way);
           return false;
@@ -164,18 +170,26 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
   }
   //if addr didn't hit
   log_way(cache->lru_way[index]);
-  /*
+
   if (action == LD_MISS || action == ST_MISS){
     update_stats(cache->stats, false, false, false, action);
     return false;
   }
-  */
-  blockPtr = &blockPtr[cache->lru_way[index]]; //blockPtr now points to block about to get evicted
-  update_stats(cache->stats, false, blockPtr->dirty_f, false, action);  //dirty bit matches writeback bool
-  blockPtr->state = (action == LOAD) ? SHARED : MODIFIED;
-  blockPtr->dirty_f = (action == STORE) ? true : false;
-  blockPtr->tag = tag;
-  change_lru(cache, index, cache->lru_way[index]);
+
+  if (blockPtr->tag == tag){
+    update_stats(cache->stats, false, false, false, action);
+    blockPtr->state = (action == LOAD) ? SHARED : MODIFIED;
+    blockPtr->dirty_f = (action == STORE) ? true : false;
+    change_lru(cache, index, way_hitInvalid);
+  }
+  else {
+    blockPtr = &blockPtr[cache->lru_way[index]]; //blockPtr now points to block about to get evicted
+    update_stats(cache->stats, false, blockPtr->dirty_f, false, action);  //dirty bit matches writeback bool
+    blockPtr->state = (action == LOAD) ? SHARED : MODIFIED;
+    blockPtr->dirty_f = (action == STORE) ? true : false;
+    blockPtr->tag = tag;
+    change_lru(cache, index, cache->lru_way[index]);
+  }
   return false;
 }
 
