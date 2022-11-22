@@ -131,11 +131,19 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
       }
       */
       if (blockPtr->state == SHARED){
-        if (action == ST_MISS)
+        //update_stats(cache->stats, (action == ST_MISS), false, (action == STORE), action); //upgrade miss = true only if action == store
+        if (action == ST_MISS) {
           blockPtr->state = INVALID;
-        else if (action == STORE)
+          update_stats(cache->stats, true, false, false, action);
+        }
+        else if (action == STORE) {
           blockPtr->state = MODIFIED;
-        update_stats(cache->stats, true, false, (action == STORE), action); //upgrade miss = true only if action == store
+          update_stats(cache->stats, false, false, true, action);
+          change_lru(cache, index, way);
+          return false;
+        }
+        else
+          update_stats(cache->stats, true, false, false, action);
       }
       else { //state == modified
         if (action == ST_MISS || action == LD_MISS){
