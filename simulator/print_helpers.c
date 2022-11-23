@@ -21,7 +21,7 @@ void log_way(int way) {
 
 
 void print_simulator_header(simulator_t *sim) {
-  printf("P5 Printout for CS 3410\n");
+  printf("Cache Simulator\n");
   printf("----------------------------------\n");
 
   printf("Trace  \t\t%s\n", sim->trace);

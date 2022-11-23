@@ -14,30 +14,21 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   cache->block_size = block_size;  // in Bytes
   cache->assoc = assoc;            // 1, 2, 3... etc.
 
-  // Implementation details
-  // Calculate cache parameters Calculate parameters
-  // 
-
+  // Calculate cache parameters
   cache->n_cache_line = capacity / block_size;
   cache->n_set = capacity / (block_size * assoc);
   cache->n_offset_bit = log2(block_size);
   cache->n_index_bit = log2(cache->n_set);
-  cache->n_tag_bit = 32 - (cache->n_index_bit + cache->n_offset_bit); 
+  cache->n_tag_bit = 32 - (cache->n_index_bit + cache->n_offset_bit);
 
   // Create the cache lines and the array of LRU bits
-  // 
-  // 
-  // Implementation details
-
   cache->lines = malloc(cache->n_set * sizeof(cache_line_t*));
   for (int i = 0; i < cache->n_set; i++) {
     cache->lines[i] = malloc(assoc * sizeof(cache_line_t));
   }
   cache->lru_way = malloc(cache->n_set * sizeof(int));
 
-  // Initialize cache tags to 0, dirty bits to false,
-  // state to INVALID, and LRU bits to 0
-  // Implementation details
+  // Initialize cache tags to 0, dirty bits to false, state to INVALID, and LRU bits to 0
   for (int i = 0; i < cache->n_set; i++) {
     for (int j = 0; j < cache->assoc; j++) {
       cache->lines[i][j].tag = 0;
@@ -88,55 +79,36 @@ unsigned long get_cache_block_addr(cache_t *cache, unsigned long addr) {
   return addr << cache->n_offset_bit;
 }
 
-/* Given a configured cache, the set index, and the way subject to a CPU action, changes the LRU index.
-*  
-* Example: a load/store on set 1 way 1 (lines[1][1])
-* for a 4-way cache, if set 1 lru is way 1 (lru_way[1] = 1) -- change_lru(cache, 1, 1) sets lru_way[1] to 2
-* for a 2-way cache -- change_lru(cache, 1, 1) sets lru_way[1] to 0
-* if the lru way != the parameter way, change_lru() makes no change
+/* 
+*  Given a configured cache, the set index, and the way subject to a CPU action, changes the LRU index.
 */
 void change_lru(cache_t *cache, unsigned long index, int way){
-  if (cache->lru_way[index] == way)
-    cache->lru_way[index] = (cache->lru_way[index] + 1 >= cache->assoc) ? 0 : (cache->lru_way[index] + 1);
+    cache->lru_way[index] = (way + 1 >= cache->assoc) ? 0 : (way + 1);
 }
 
+/*
+* This method has the same functionallity as
+* access_cache() below, but specifically for msi protocol caches
+*/
 bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
   unsigned long index = 0;
-  if (cache->n_index_bit != 0)
+  if (cache->n_index_bit != 0)  //only get cache index if cache != fully associative
     index = get_cache_index(cache, addr);
   unsigned long tag = get_cache_tag(cache, addr);
   log_set(index);
   cache_line_t* blockPtr = cache->lines[index]; //blockPtr points to the array of $ lines at index (the ways of the set)
-  //check if addr is hit
-  /*
-  bool hit = false;
-  int way;
-  for (way = 0; way < cache->assoc; way++){
-    if (blockPtr[way].tag == tag)
-      hit = true;
-      break;
-  }
-  */
- int way_hitInvalid = 0;
+
+  int way_hitInvalid = 0;
   for(int way = 0; way < cache->assoc; way++){   //check if addr is a hit
-    if(blockPtr[way].tag == tag /*&& blockPtr[way].state != INVALID*/){
+    if(blockPtr[way].tag == tag){
       blockPtr = &blockPtr[way];   //blockPtr now points to the block that was a hit
-      if(blockPtr->state == INVALID){
+      if(blockPtr->state == INVALID){ //if state invalid, miss. go though miss prot below
         way_hitInvalid = way;
         break;
       }
       log_way(way);
-      /*
-      if (blockPtr->state == INVALID){
-        if (action == LOAD)
-          blockPtr->state = SHARED;
-        else if (action == STORE)
-          blockPtr->state = MODIFIED;
-        update_stats(cache->stats, true, false, false, action);
-      }
-      */
+
       if (blockPtr->state == SHARED){
-        //update_stats(cache->stats, (action == ST_MISS), false, (action == STORE), action); //upgrade miss = true only if action == store
         if (action == ST_MISS) {
           blockPtr->state = INVALID;
           update_stats(cache->stats, true, false, false, action);
@@ -154,8 +126,8 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
       else { //state == modified
         if (action == ST_MISS || action == LD_MISS){
           blockPtr->state = (action == ST_MISS) ? INVALID : SHARED;
-          blockPtr->dirty_f = false;       //block will always be dirty if state == modified
-          update_stats(cache->stats, true, true, false, action); //so we can writeback w/o checking dirty_f
+          update_stats(cache->stats, true, (blockPtr->dirty_f), false, action);
+          blockPtr->dirty_f = false;
         }
         else
           update_stats(cache->stats, true, false, false, action);
@@ -168,21 +140,23 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
       return true;
     }
   }
-  //if addr didn't hit
-  log_way(cache->lru_way[index]);
 
+  //if addr didn't hit
   if (action == LD_MISS || action == ST_MISS){
+    log_way(cache->lru_way[index]);
     update_stats(cache->stats, false, false, false, action);
     return false;
   }
 
-  if (blockPtr->tag == tag){
+  if (blockPtr->tag == tag){  //miss because state was invalid
+    log_way(way_hitInvalid);
     update_stats(cache->stats, false, false, false, action);
     blockPtr->state = (action == LOAD) ? SHARED : MODIFIED;
     blockPtr->dirty_f = (action == STORE) ? true : false;
     change_lru(cache, index, way_hitInvalid);
   }
-  else {
+  else {  //miss because no tag match
+    log_way(cache->lru_way[index]);
     blockPtr = &blockPtr[cache->lru_way[index]]; //blockPtr now points to block about to get evicted
     update_stats(cache->stats, false, blockPtr->dirty_f, false, action);  //dirty bit matches writeback bool
     blockPtr->state = (action == LOAD) ? SHARED : MODIFIED;
@@ -192,105 +166,6 @@ bool access_msi_cache(cache_t *cache, unsigned long addr, enum action_t action){
   }
   return false;
 }
-
-/*
-  for (int i = 0; i < cache->assoc; i++){
-    if (blockPtr[i].tag == tag){
-      log_way(i);
-      //newState = blockPtr[i].state;
-      //newDirty = blockPtr[i].dirty_f;
-      if (blockPtr[i].state == INVALID){
-        if (action == LOAD){
-          //change_lru(cache, index, i);
-          //newState = SHARED;
-          blockPtr[i].state = SHARED;
-          update_stats(cache->stats, true, false, false, action);
-        }
-        else if (action == STORE){
-          //newDirty = true;
-          //newState = MODIFIED;
-          blockPtr[i].dirty_f = true;
-          blockPtr[i].state = MODIFIED;
-          update_stats(cache->stats, true, false, false, action);
-        }
-        else{
-          update_stats(cache->stats, true, false, false, action);
-        }
-      }
-      else if (blockPtr[i].state == SHARED){
-        if (action == ST_MISS){
-          blockPtr[i].state = INVALID;
-          update_stats(cache->stats, true, false, false, action);
-        }
-        else if (action == STORE){
-          blockPtr[i].state = MODIFIED;
-          blockPtr[i].dirty_f = true;
-          update_stats(cache->stats, true, false, true, action);
-        }
-        else if (action == LOAD || action == LD_MISS)
-          update_stats(cache->stats, true, false, false, action);
-      }
-      else if (blockPtr[i].state == MODIFIED){
-        if (action == ST_MISS){
-          if (blockPtr[i].dirty_f)
-            update_stats(cache->stats, true, true, false, action);
-          else
-            update_stats(cache->stats, true, false, false, action); //will never happen, modified = dirty bit always true
-          blockPtr[i].state = INVALID;
-          blockPtr[i].dirty_f = false;
-        }
-        else if (action == LD_MISS){
-          if (blockPtr[i].dirty_f)
-            update_stats(cache->stats, true, true, false, action);
-          else
-            update_stats(cache->stats, true, false, false, action); // same here
-          blockPtr[i].state = SHARED;
-          blockPtr[i].dirty_f = false;
-        }
-        else if (action == LOAD || action == STORE)
-          update_stats(cache->stats, true, false, false, action);
-      }
-      if (action == LOAD || action == STORE) {
-        //change_lru(cache, index, i);
-        if (cache->lru_way[index] == i){
-          int lruIndex = i + 1;
-          if (lruIndex >= cache->assoc)
-            lruIndex = 0;
-          cache->lru_way[index] = lruIndex;
-        }
-      }
-      return true;
-    }
-  }
-  cache_line_t* evicted = &blockPtr[cache->lru_way[index]];
-  log_way(cache->lru_way[index]);
-  if (action == LOAD && evicted->dirty_f == true) {
-    evicted->dirty_f = false;
-    evicted->state = SHARED;
-    update_stats(cache->stats, false, true, false, action);
-  }
-  else if (action == STORE){
-    if(evicted->dirty_f == true)
-      update_stats(cache->stats, false, true, false, action);
-    else
-      update_stats(cache->stats, false, false, false, action);
-    evicted->dirty_f = true;
-    evicted->state = MODIFIED;
-  }
-  else {
-    update_stats(cache->stats, false, false, false, action);
-    if (action == LD_MISS || action == ST_MISS)
-      return false;
-    evicted->state = SHARED;
-  }
-  evicted->tag = tag;
-  if (cache->lru_way[index] + 1 >= cache->assoc) //write lru wraparound helper function?   send cache and index as parameters, function sets array w/ new lru way, no return
-    cache->lru_way[index] = 0;
-  else
-    cache->lru_way[index] += 1;
-  return false;
-}
-*/
 
 
 /* this method takes a cache, an address, and an action
@@ -314,6 +189,10 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
     if (blockPtr[i].tag == tag && blockPtr[i].state == VALID){
       log_way(i);
       if (action == LD_MISS || action == ST_MISS){
+        if (cache->protocol == NONE){
+          update_stats(cache->stats, true, false, false, action);
+          return true;
+        }
         blockPtr[i].state = INVALID;
         update_stats(cache->stats, true, blockPtr[i].dirty_f, false, action);
         blockPtr[i].dirty_f = false;
@@ -326,31 +205,13 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
       return true;
     }
   }
-      
-        /*
-        if (blockPtr[i].dirty_f)
-          update_stats(cache->stats, true, true, false, action);
-        else
-          update_stats(cache->stats, true, false, false, action);
-        return true;
-      }
-      */
-      /*
-      if (cache->lru_way[index] == i){
-        int lruIndex = i + 1;
-        if (lruIndex >= cache->assoc)
-          lruIndex = 0;
-        cache->lru_way[index] = lruIndex;
-      }
-      update_stats(cache->stats, true, false, false, action);
-      return true;
-    }
-    */
-
   //for cache misses:
   blockPtr = &blockPtr[cache->lru_way[index]];  //blockPtr now points to block about to be evicted
   log_way(cache->lru_way[index]);
-  //WARNING dirty should be false if invalid, but might need LD/ST actions writeback ONLY (dont want LD/ST_MISS to writeback)
+  if (cache->protocol == NONE && (action == LD_MISS || action == ST_MISS)){  //with no protocol, ld/st_misses have no effect
+    update_stats(cache->stats, false, false, false, action);
+    return false;
+  }
   update_stats(cache->stats, false, blockPtr->dirty_f, false, action); //simulates writeback if evicted block is dirty
   if (action == LOAD || action == STORE){
     blockPtr->dirty_f = (action == STORE); //dirty bit = true if action == store
@@ -360,29 +221,3 @@ bool access_cache(cache_t *cache, unsigned long addr, enum action_t action) {
   }
   return false;
 }
-
-/*
-  if (action == LOAD && blockPtr->dirty_f == true) {
-    blockPtr->dirty_f = false;
-    update_stats(cache->stats, false, true, false, action);
-  }
-  else if (action == STORE){
-    if(blockPtr->dirty_f == true)
-      update_stats(cache->stats, false, true, false, action);
-    else
-      update_stats(cache->stats, false, false, false, action);
-    blockPtr->dirty_f = true;
-  }
-  else
-    update_stats(cache->stats, false, false, false, action);
-    if (action == LD_MISS || action == ST_MISS)
-      return false;
-  blockPtr->tag = tag;
-  blockPtr->state = VALID;
-  if (cache->lru_way[index] + 1 >= cache->assoc) //write lru wraparound helper function?   send cache and index as parameters, function sets array w/ new lru way, no return
-    cache->lru_way[index] = 0;
-  else
-    cache->lru_way[index] += 1;
-  return false;
-}
-*/

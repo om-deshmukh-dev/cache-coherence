@@ -14,30 +14,21 @@ cache_t *make_cache(int capacity, int block_size, int assoc, enum protocol_t pro
   cache->block_size = block_size;  // in Bytes
   cache->assoc = assoc;            // 1, 2, 3... etc.
 
-  // Implementation details
-  // Calculate cache parameters Calculate parameters
-  // 
-
+  // Calculate cache parameters
   cache->n_cache_line = capacity / block_size;
   cache->n_set = capacity / (block_size * assoc);
   cache->n_offset_bit = log2(block_size);
   cache->n_index_bit = log2(cache->n_set);
-  cache->n_tag_bit = 32 - (cache->n_index_bit + cache->n_offset_bit); 
+  cache->n_tag_bit = 32 - (cache->n_index_bit + cache->n_offset_bit);
 
   // Create the cache lines and the array of LRU bits
-  // 
-  // 
-  // Implementation details
-
   cache->lines = malloc(cache->n_set * sizeof(cache_line_t*));
   for (int i = 0; i < cache->n_set; i++) {
     cache->lines[i] = malloc(assoc * sizeof(cache_line_t));
   }
   cache->lru_way = malloc(cache->n_set * sizeof(int));
 
-  // Initialize cache tags to 0, dirty bits to false,
-  // state to INVALID, and LRU bits to 0
-  // Implementation details
+  // Initialize cache tags to 0, dirty bits to false, state to INVALID, and LRU bits to 0
   for (int i = 0; i < cache->n_set; i++) {
     for (int j = 0; j < cache->assoc; j++) {
       cache->lines[i][j].tag = 0;

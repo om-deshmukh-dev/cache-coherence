@@ -1,5 +1,5 @@
 ################################################################################
-#              Makefile for the Cache Simulator Cache Simulator                        #
+#              Makefile for the Cache Simulator                                #
 ################################################################################
 
 # Additional flags for the compiler

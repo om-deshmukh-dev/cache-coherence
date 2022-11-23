@@ -12,7 +12,7 @@
 // {INVALID, VALID} for VI, {INVALID, SHARED, MODIFIED} for MSI 
 enum state_t { INVALID, VALID, SHARED, MODIFIED };
 
-// what coherence protocol are we simulating?
+// coherence protocol for simulation
 enum protocol_t { NONE, VI, MSI }; 
 
 typedef struct {
